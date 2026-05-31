@@ -19,6 +19,7 @@
 #include "lamp_G.h"
 #include "lamp_R.h"
 #include "ags10.h"
+#include "dht11.h"
 #include "sensor_display.h"
 
 #include <esp_timer.h>
@@ -197,18 +198,24 @@ private:
         return true;
         });
 
-        // 5. AGS10 空氣品質感測器（與主 OLED 共用 I2C bus，地址 0x1A）
+        // 5. AGS10 空氣品質感測器
         static Ags10 ags10(display_i2c_bus_);
 
-        // 6. 第二塊 OLED 專門顯示感測器數據（獨立 I2C bus GPIO8/9）
+        // 6. DHT11 溫溼度感測器（GPIO2）
+        static Dht11 dht11(DHT11_DATA_PIN);
+        static float s_temperature = 0.0f;
+        static float s_humidity    = 0.0f;
+        static bool  s_dht_ok      = false;
+
+        // 7. 第二塊 OLED 專門顯示感測器數據
         static SensorDisplay sensor_disp(sensor_i2c_bus_);
 
-        // 語音查詢工具：讀值後同步更新第二塊 OLED
+        // 語音查詢工具：空氣品質
         server.AddTool("空氣品質.讀取", "讀取目前室內 TVOC 空氣品質濃度（單位 ppb，數值越低越好）",
             PropertyList(),
             [](const PropertyList&) -> ReturnValue {
                 int32_t tvoc = ags10.ReadTVOC();
-                sensor_disp.ShowAirQuality(tvoc);
+                sensor_disp.ShowAll(tvoc, s_temperature, s_humidity, s_dht_ok);
                 if (tvoc < 0) {
                     return std::string("空氣感測器正在預熱或讀取失敗，請稍後再試。");
                 }
@@ -220,19 +227,47 @@ private:
                 return std::string("目前 TVOC 濃度為 ") + std::to_string(tvoc) + " ppb，空氣品質" + level + "。";
             });
 
-        // 定時每 30 秒自動更新第二塊 OLED（不依賴語音觸發）
-        static esp_timer_handle_t air_timer;
+        // 語音查詢工具：溫溼度
+        server.AddTool("溫溼度.讀取", "讀取目前室內溫度（°C）與濕度（%）",
+            PropertyList(),
+            [](const PropertyList&) -> ReturnValue {
+                float temp, humi;
+                bool ok = dht11.Read(&temp, &humi);
+                if (ok) {
+                    s_temperature = temp;
+                    s_humidity    = humi;
+                    s_dht_ok      = true;
+                    sensor_disp.ShowAll(ags10.ReadTVOC(), temp, humi, true);
+                    char buf[80];
+                    snprintf(buf, sizeof(buf), "目前室內溫度 %.1f °C，濕度 %.1f%%。", temp, humi);
+                    return std::string(buf);
+                } else {
+                    s_dht_ok = false;
+                    return std::string("溫溼度感測器讀取失敗，請確認接線。");
+                }
+            });
+
+        // 定時每 2 秒自動更新 OLED（DHT11 最短間隔 1s，留餘裕用 2s）
+        static esp_timer_handle_t sensor_timer;
         esp_timer_create_args_t timer_args = {
             .callback = [](void*) {
-                sensor_disp.ShowAirQuality(ags10.ReadTVOC());
+                int32_t tvoc = ags10.ReadTVOC();
+                float temp, humi;
+                bool ok = dht11.Read(&temp, &humi);
+                if (ok) {
+                    s_temperature = temp;
+                    s_humidity    = humi;
+                    s_dht_ok      = true;
+                }
+                sensor_disp.ShowAll(tvoc, s_temperature, s_humidity, s_dht_ok);
             },
             .arg = nullptr,
             .dispatch_method = ESP_TIMER_TASK,
-            .name = "air_quality",
+            .name = "sensor_update",
             .skip_unhandled_events = true,
         };
-        esp_timer_create(&timer_args, &air_timer);
-        esp_timer_start_periodic(air_timer, 30ULL * 1000 * 1000);  // 30s
+        esp_timer_create(&timer_args, &sensor_timer);
+        esp_timer_start_periodic(sensor_timer, 2ULL * 1000 * 1000);  // 2s
     }
 
 public:

@@ -61,6 +61,7 @@ list(APPEND SOURCES
     "boards/common/sy6970.cc"
     "boards/common/system_reset.cc"
     "boards/common/ags10.cc"
+    "boards/common/dht11.cc"
     "boards/common/sensor_display.cc"
 )
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/boards/common)

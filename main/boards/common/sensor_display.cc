@@ -196,6 +196,45 @@ void SensorDisplay::Flush() {
     }
 }
 
+void SensorDisplay::ShowAll(int32_t tvoc_ppb, float temperature, float humidity, bool dht_ok) {
+    Clear();
+
+    PutStr(0, 0, "  Sensor Data   ");
+    PutStr(0, 1, "----------------");
+
+    // TVOC
+    if (tvoc_ppb < 0) {
+        PutStr(0, 2, "TVOC: warming.. ");
+    } else {
+        char line[24];
+        snprintf(line, sizeof(line), "TVOC:%6ld ppb", (long)tvoc_ppb);
+        PutStr(0, 2, line);
+        const char* level;
+        if      (tvoc_ppb < 220)  level = "Air:      Good  ";
+        else if (tvoc_ppb < 660)  level = "Air:      Fair  ";
+        else if (tvoc_ppb < 2200) level = "Air:      Poor  ";
+        else                      level = "Air:  VeryPoor  ";
+        PutStr(0, 3, level);
+    }
+
+    PutStr(0, 4, "----------------");
+
+    // Temperature & Humidity
+    if (!dht_ok) {
+        PutStr(0, 5, "Temp:    Error  ");
+        PutStr(0, 6, "Humi:    Error  ");
+    } else {
+        char line[24];
+        snprintf(line, sizeof(line), "Temp: %5.1f C  ", temperature);
+        PutStr(0, 5, line);
+        snprintf(line, sizeof(line), "Humi: %5.1f %%  ", humidity);
+        PutStr(0, 6, line);
+    }
+
+    PutStr(0, 7, "----------------");
+    Flush();
+}
+
 void SensorDisplay::ShowAirQuality(int32_t tvoc_ppb) {
     Clear();
 

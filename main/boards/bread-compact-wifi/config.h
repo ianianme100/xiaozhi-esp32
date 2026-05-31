@@ -56,4 +56,7 @@
 // A MCP Test: Control a lamp
 #define LAMP_GPIO GPIO_NUM_18
 
+// DHT11 temperature & humidity sensor
+#define DHT11_DATA_PIN GPIO_NUM_2
+
 #endif // _BOARD_CONFIG_H_

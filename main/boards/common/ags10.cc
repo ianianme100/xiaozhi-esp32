@@ -42,7 +42,7 @@ int32_t Ags10::ReadTVOC() {
         return -1;
     }
 
-    return (int32_t)((buf[1] << 8) | buf[2]);
+    return (int32_t)((buf[1] << 16) | (buf[2] << 8) | buf[3]);
 }
 
 uint8_t Ags10::CRC8(const uint8_t* data, size_t len) {
