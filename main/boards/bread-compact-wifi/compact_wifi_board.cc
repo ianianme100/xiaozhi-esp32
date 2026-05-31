@@ -18,6 +18,7 @@
 #include "lamp_B.h"
 #include "lamp_G.h"
 #include "lamp_R.h"
+#include "ags10.h"
 
 #ifdef SH1106
 #include <esp_lcd_panel_sh1106.h>
@@ -177,6 +178,23 @@ private:
         lamp_B.TurnOff();
         return true;
         });
+
+        // 5. AGS10 空氣品質感測器（與 OLED 共用 I2C bus，地址 0x1A）
+        static Ags10 ags10(display_i2c_bus_);
+        server.AddTool("空氣品質.讀取", "讀取目前室內 TVOC 空氣品質濃度（單位 ppb，數值越低越好）",
+            PropertyList(),
+            [](const PropertyList&) -> ReturnValue {
+                int32_t tvoc = ags10.ReadTVOC();
+                if (tvoc < 0) {
+                    return std::string("空氣感測器正在預熱或讀取失敗，請稍後再試。");
+                }
+                std::string level;
+                if (tvoc < 220)       level = "良好";
+                else if (tvoc < 660)  level = "一般";
+                else if (tvoc < 2200) level = "較差";
+                else                  level = "非常差";
+                return std::string("目前 TVOC 濃度為 ") + std::to_string(tvoc) + " ppb，空氣品質" + level + "。";
+            });
     }
 
 public:
