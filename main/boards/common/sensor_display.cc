@@ -168,7 +168,7 @@ void SensorDisplay::PutChar(int col, int page, char c) {
             if (px >= 128) break;
             // In page mode: each byte in pages_[page][col] has bit0=top row of page
             // We are filling one full page per character row
-            if (bits & (0x80 >> bit)) {
+            if (bits & (1 << bit)) {
                 pages_[page][px] |= (1 << row);
             }
         }
