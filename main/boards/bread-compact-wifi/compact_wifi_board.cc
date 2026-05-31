@@ -19,6 +19,9 @@
 #include "lamp_G.h"
 #include "lamp_R.h"
 #include "ags10.h"
+#include "sensor_display.h"
+
+#include <esp_timer.h>
 
 #ifdef SH1106
 #include <esp_lcd_panel_sh1106.h>
@@ -29,6 +32,7 @@
 class CompactWifiBoard : public WifiBoard {
 private:
     i2c_master_bus_handle_t display_i2c_bus_;
+    i2c_master_bus_handle_t sensor_i2c_bus_;
     esp_lcd_panel_io_handle_t panel_io_ = nullptr;
     esp_lcd_panel_handle_t panel_ = nullptr;
     Display* display_ = nullptr;
@@ -51,6 +55,20 @@ private:
             },
         };
         ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &display_i2c_bus_));
+    }
+
+    void InitializeSensorI2c() {
+        i2c_master_bus_config_t bus_config = {
+            .i2c_port = (i2c_port_t)1,
+            .sda_io_num = GPIO_NUM_8,
+            .scl_io_num = GPIO_NUM_9,
+            .clk_source = I2C_CLK_SRC_DEFAULT,
+            .glitch_ignore_cnt = 7,
+            .intr_priority = 0,
+            .trans_queue_depth = 0,
+            .flags = { .enable_internal_pullup = 1 },
+        };
+        ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &sensor_i2c_bus_));
     }
 
     void InitializeSsd1306Display() {
@@ -179,12 +197,18 @@ private:
         return true;
         });
 
-        // 5. AGS10 空氣品質感測器（與 OLED 共用 I2C bus，地址 0x1A）
+        // 5. AGS10 空氣品質感測器（與主 OLED 共用 I2C bus，地址 0x1A）
         static Ags10 ags10(display_i2c_bus_);
+
+        // 6. 第二塊 OLED 專門顯示感測器數據（獨立 I2C bus GPIO8/9）
+        static SensorDisplay sensor_disp(sensor_i2c_bus_);
+
+        // 語音查詢工具：讀值後同步更新第二塊 OLED
         server.AddTool("空氣品質.讀取", "讀取目前室內 TVOC 空氣品質濃度（單位 ppb，數值越低越好）",
             PropertyList(),
             [](const PropertyList&) -> ReturnValue {
                 int32_t tvoc = ags10.ReadTVOC();
+                sensor_disp.ShowAirQuality(tvoc);
                 if (tvoc < 0) {
                     return std::string("空氣感測器正在預熱或讀取失敗，請稍後再試。");
                 }
@@ -195,6 +219,20 @@ private:
                 else                  level = "非常差";
                 return std::string("目前 TVOC 濃度為 ") + std::to_string(tvoc) + " ppb，空氣品質" + level + "。";
             });
+
+        // 定時每 30 秒自動更新第二塊 OLED（不依賴語音觸發）
+        static esp_timer_handle_t air_timer;
+        esp_timer_create_args_t timer_args = {
+            .callback = [](void*) {
+                sensor_disp.ShowAirQuality(ags10.ReadTVOC());
+            },
+            .arg = nullptr,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "air_quality",
+            .skip_unhandled_events = true,
+        };
+        esp_timer_create(&timer_args, &air_timer);
+        esp_timer_start_periodic(air_timer, 30ULL * 1000 * 1000);  // 30s
     }
 
 public:
@@ -204,6 +242,7 @@ public:
         volume_up_button_(VOLUME_UP_BUTTON_GPIO),
         volume_down_button_(VOLUME_DOWN_BUTTON_GPIO) {
         InitializeDisplayI2c();
+        InitializeSensorI2c();
         InitializeSsd1306Display();
         InitializeButtons();
         InitializeTools();
