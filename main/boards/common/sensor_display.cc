@@ -208,10 +208,10 @@ void SensorDisplay::ShowAirQuality(int32_t tvoc_ppb) {
     if (tvoc_ppb < 0) {
         PutStr(0, 3, "  Warming up... ");
     } else {
-        char line[17];
+        char line[24];
 
         // Row 2 (page 2): TVOC value
-        snprintf(line, sizeof(line), "TVOC:%5ld ppb  ", (long)tvoc_ppb);
+        snprintf(line, sizeof(line), "TVOC:%6ld ppb", (long)tvoc_ppb);
         PutStr(0, 2, line);
 
         // Row 3 (page 3): level
