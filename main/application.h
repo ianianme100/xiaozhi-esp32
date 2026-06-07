@@ -120,6 +120,14 @@ public:
      */
     void ResetProtocol();
 
+    /**
+     * Close the audio channel without destroying the protocol object (thread-safe)
+     * Use this to force IsAudioChannelOpened() back to false so the next wake word
+     * detection goes through the normal kDeviceStateConnecting reconnect path,
+     * instead of being silently dropped by ContinueWakeWordInvoke's state guard.
+     */
+    void CloseAudioChannel();
+
 private:
     Application();
     ~Application();

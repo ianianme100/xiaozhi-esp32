@@ -201,6 +201,10 @@ private:
                     app.SetDeviceState(kDeviceStateIdle);
                     app.GetAudioService().EnableVoiceProcessing(false);
                     app.GetAudioService().EnableWakeWordDetection(true);
+                    // Force the audio channel state to reset so the next wake word
+                    // goes through the normal reconnect path instead of being
+                    // silently dropped (channel may look "open" after the abort).
+                    app.CloseAudioChannel();
                     app.DismissAlert();
                     if (display_ != nullptr) {
                         display_->SetStatus(Lang::Strings::STANDBY);
