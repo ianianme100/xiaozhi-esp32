@@ -21,6 +21,7 @@
 #include "ags10.h"
 #include "dht11.h"
 #include "sensor_display.h"
+#include "ir_remote.h"
 
 #include <esp_timer.h>
 
@@ -41,6 +42,7 @@ private:
     Button touch_button_;
     Button volume_up_button_;
     Button volume_down_button_;
+    bool emergency_alarm_active_ = false;
 
     void InitializeDisplayI2c() {
         i2c_master_bus_config_t bus_config = {
@@ -133,11 +135,8 @@ private:
             }
             app.ToggleChatState();
         });
-        touch_button_.OnPressDown([this]() {
-            Application::GetInstance().StartListening();
-        });
-        touch_button_.OnPressUp([this]() {
-            Application::GetInstance().StopListening();
+        touch_button_.OnClick([this]() {
+            SetEmergencyAlarm(!emergency_alarm_active_, true, true);
         });
 
         volume_up_button_.OnClick([this]() {
@@ -169,6 +168,61 @@ private:
             GetAudioCodec()->SetOutputVolume(0);
             GetDisplay()->ShowNotification(Lang::Strings::MUTED);
         });
+    }
+
+    void SetEmergencyAlarm(bool active, bool show_notification = true, bool announce_help = false) {
+        emergency_alarm_active_ = active;
+        gpio_set_level(BUZZER_GPIO, active ? BUZZER_ACTIVE_LEVEL : BUZZER_INACTIVE_LEVEL);
+        ESP_LOGW(TAG, "Emergency alarm %s", active ? "ON" : "OFF");
+        if (show_notification && display_ != nullptr) {
+            display_->ShowNotification(active ? "需要幫助" : "緊急呼叫已取消");
+        }
+        if (announce_help) {
+            auto& app = Application::GetInstance();
+            if (active) {
+                app.AbortSpeaking(kAbortReasonNone);
+                app.StopListening();
+                app.Schedule([this]() {
+                    if (display_ != nullptr) {
+                        display_->SetChatMessage("system", "需要幫助");
+                        display_->ShowNotification("需要幫助", 10000);
+                    }
+                    Application::GetInstance().Alert("緊急呼叫", "需要幫助", "triangle_exclamation", Lang::Sounds::OGG_EXCLAMATION);
+                });
+            } else {
+                app.Schedule([this]() {
+                    auto& app = Application::GetInstance();
+                    auto state = app.GetDeviceState();
+                    if (state == kDeviceStateSpeaking) {
+                        app.AbortSpeaking(kAbortReasonNone);
+                    } else if (state == kDeviceStateListening) {
+                        app.StopListening();
+                    }
+                    app.SetDeviceState(kDeviceStateIdle);
+                    app.GetAudioService().EnableVoiceProcessing(false);
+                    app.GetAudioService().EnableWakeWordDetection(true);
+                    app.DismissAlert();
+                    if (display_ != nullptr) {
+                        display_->SetStatus(Lang::Strings::STANDBY);
+                        display_->SetEmotion("neutral");
+                        display_->SetChatMessage("system", "");
+                        display_->ShowNotification("緊急呼叫已取消", 3000);
+                    }
+                });
+            }
+        }
+    }
+
+    void InitializeBuzzer() {
+        gpio_config_t buzzer_config = {
+            .pin_bit_mask = (1ULL << BUZZER_GPIO),
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE,
+        };
+        ESP_ERROR_CHECK(gpio_config(&buzzer_config));
+        SetEmergencyAlarm(false, false);
     }
 
     // 物联网初始化，逐步迁移到 MCP 协议
@@ -268,6 +322,47 @@ private:
         };
         esp_timer_create(&timer_args, &sensor_timer);
         esp_timer_start_periodic(sensor_timer, 2ULL * 1000 * 1000);  // 2s
+
+        // 8. 紅外線遙控學習與發射
+        static IrRemote ir_remote(IR_RX_GPIO, IR_TX_GPIO);
+
+        server.AddTool("self.ir.learn_fan_power", "學習風扇電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnFanPower();
+        });
+        server.AddTool("self.ir.learn_fan_speed", "學習風扇風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnFanSpeed();
+        });
+        server.AddTool("self.ir.learn_fan_speed_down", "學習風扇降低風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnFanSpeedDown();
+        });
+        server.AddTool("self.ir.learn_light_power", "學習燈具電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnLightPower();
+        });
+        server.AddTool("self.ir.send_fan_power", "發送風扇電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendFanPower();
+        });
+        server.AddTool("self.ir.send_fan_speed", "發送風扇風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendFanSpeed();
+        });
+        server.AddTool("self.ir.send_fan_speed_down", "發送風扇降低風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendFanSpeedDown();
+        });
+        server.AddTool("self.ir.send_light_power", "發送燈具電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendLightPower();
+        });
+        server.AddTool("self.ir.get_status", "取得紅外線遙控各按鍵的學習狀態（JSON 格式）", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.GetStatus();
+        });
+
+        // 9. 緊急呼叫工具
+        server.AddTool("self.nurse_call.trigger", "觸發緊急呼叫警報並通知需要幫助", PropertyList(), [this](const PropertyList&) -> ReturnValue {
+            SetEmergencyAlarm(true, true, true);
+            return true;
+        });
+        server.AddTool("self.nurse_call.cancel", "取消目前的緊急呼叫警報", PropertyList(), [this](const PropertyList&) -> ReturnValue {
+            SetEmergencyAlarm(false, true, true);
+            return true;
+        });
     }
 
 public:
@@ -279,6 +374,7 @@ public:
         InitializeDisplayI2c();
         InitializeSensorI2c();
         InitializeSsd1306Display();
+        InitializeBuzzer();
         InitializeButtons();
         InitializeTools();
     }

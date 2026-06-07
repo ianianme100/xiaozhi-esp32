@@ -30,7 +30,7 @@
 
 #define BUILTIN_LED_GPIO        GPIO_NUM_48
 #define BOOT_BUTTON_GPIO        GPIO_NUM_0
-#define TOUCH_BUTTON_GPIO       GPIO_NUM_47
+#define TOUCH_BUTTON_GPIO       GPIO_NUM_21
 #define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_40
 #define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_39
 
@@ -58,5 +58,15 @@
 
 // DHT11 temperature & humidity sensor
 #define DHT11_DATA_PIN GPIO_NUM_2
+
+// Emergency button and buzzer
+#define EMERGENCY_BUTTON_GPIO TOUCH_BUTTON_GPIO
+#define BUZZER_GPIO GPIO_NUM_13
+#define BUZZER_ACTIVE_LEVEL 1
+#define BUZZER_INACTIVE_LEVEL 0
+
+// Infrared remote receiver/transmitter
+#define IR_RX_GPIO GPIO_NUM_11
+#define IR_TX_GPIO GPIO_NUM_12
 
 #endif // _BOARD_CONFIG_H_
