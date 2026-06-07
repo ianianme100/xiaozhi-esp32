@@ -363,6 +363,9 @@ private:
             SetEmergencyAlarm(false, true, true);
             return true;
         });
+        server.AddTool("self.nurse_call.get_status", "查詢目前緊急呼叫警報是否正在響", PropertyList(), [this](const PropertyList&) -> ReturnValue {
+            return std::string("{\"alarm_active\":") + (emergency_alarm_active_ ? "true" : "false") + "}";
+        });
     }
 
 public:
