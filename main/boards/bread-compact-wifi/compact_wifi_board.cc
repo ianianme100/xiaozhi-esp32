@@ -330,8 +330,23 @@ private:
         // 8. 紅外線遙控學習與發射
         static IrRemote ir_remote(IR_RX_GPIO, IR_TX_GPIO);
 
-        server.AddTool("self.ir.learn_fan_power", "學習風扇電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
-            return ir_remote.LearnFanPower();
+        server.AddTool("self.ir.learn_ac_open", "學習冷氣開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnAcOpen();
+        });
+        server.AddTool("self.ir.learn_ac_close", "學習冷氣關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnAcClose();
+        });
+        server.AddTool("self.ir.learn_tv_open", "學習電視開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnTvOpen();
+        });
+        server.AddTool("self.ir.learn_tv_close", "學習電視關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnTvClose();
+        });
+        server.AddTool("self.ir.learn_fan_open", "學習風扇開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnFanOpen();
+        });
+        server.AddTool("self.ir.learn_fan_close", "學習風扇關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.LearnFanClose();
         });
         server.AddTool("self.ir.learn_fan_speed", "學習風扇風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
             return ir_remote.LearnFanSpeed();
@@ -342,8 +357,23 @@ private:
         server.AddTool("self.ir.learn_light_power", "學習燈具電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
             return ir_remote.LearnLightPower();
         });
-        server.AddTool("self.ir.send_fan_power", "發送風扇電源鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
-            return ir_remote.SendFanPower();
+        server.AddTool("self.ir.send_ac_open", "發送冷氣開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendAcOpen();
+        });
+        server.AddTool("self.ir.send_ac_close", "發送冷氣關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendAcClose();
+        });
+        server.AddTool("self.ir.send_tv_open", "發送電視開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendTvOpen();
+        });
+        server.AddTool("self.ir.send_tv_close", "發送電視關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendTvClose();
+        });
+        server.AddTool("self.ir.send_fan_open", "發送風扇開機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendFanOpen();
+        });
+        server.AddTool("self.ir.send_fan_close", "發送風扇關機鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
+            return ir_remote.SendFanClose();
         });
         server.AddTool("self.ir.send_fan_speed", "發送風扇風速鍵的紅外線訊號", PropertyList(), [](const PropertyList&) -> ReturnValue {
             return ir_remote.SendFanSpeed();

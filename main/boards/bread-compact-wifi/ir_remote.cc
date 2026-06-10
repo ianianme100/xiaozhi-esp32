@@ -64,7 +64,12 @@ void IrRemote::Initialize() {
 }
 
 void IrRemote::LoadStoredCodes() {
-    LoadStoredCode("fan_power", fan_power_);
+    LoadStoredCode("ac_open", ac_open_);
+    LoadStoredCode("ac_close", ac_close_);
+    LoadStoredCode("tv_open", tv_open_);
+    LoadStoredCode("tv_close", tv_close_);
+    LoadStoredCode("fan_open", fan_open_);
+    LoadStoredCode("fan_close", fan_close_);
     LoadStoredCode("fan_speed", fan_speed_);
     LoadStoredCode("fan_speed_down", fan_speed_down_);
     LoadStoredCode("light_power", light_power_);
@@ -259,8 +264,28 @@ std::string IrRemote::Send(const LearnedCode& code, const char* label) {
     return std::string("Sent ") + label + ".";
 }
 
-std::string IrRemote::LearnFanPower() {
-    return Learn(fan_power_, "fan power", "fan_power");
+std::string IrRemote::LearnAcOpen() {
+    return Learn(ac_open_, "ac open", "ac_open");
+}
+
+std::string IrRemote::LearnAcClose() {
+    return Learn(ac_close_, "ac close", "ac_close");
+}
+
+std::string IrRemote::LearnTvOpen() {
+    return Learn(tv_open_, "tv open", "tv_open");
+}
+
+std::string IrRemote::LearnTvClose() {
+    return Learn(tv_close_, "tv close", "tv_close");
+}
+
+std::string IrRemote::LearnFanOpen() {
+    return Learn(fan_open_, "fan open", "fan_open");
+}
+
+std::string IrRemote::LearnFanClose() {
+    return Learn(fan_close_, "fan close", "fan_close");
 }
 
 std::string IrRemote::LearnFanSpeed() {
@@ -275,8 +300,28 @@ std::string IrRemote::LearnLightPower() {
     return Learn(light_power_, "light power", "light_power");
 }
 
-std::string IrRemote::SendFanPower() {
-    return Send(fan_power_, "fan power");
+std::string IrRemote::SendAcOpen() {
+    return Send(ac_open_, "ac open");
+}
+
+std::string IrRemote::SendAcClose() {
+    return Send(ac_close_, "ac close");
+}
+
+std::string IrRemote::SendTvOpen() {
+    return Send(tv_open_, "tv open");
+}
+
+std::string IrRemote::SendTvClose() {
+    return Send(tv_close_, "tv close");
+}
+
+std::string IrRemote::SendFanOpen() {
+    return Send(fan_open_, "fan open");
+}
+
+std::string IrRemote::SendFanClose() {
+    return Send(fan_close_, "fan close");
 }
 
 std::string IrRemote::SendFanSpeed() {
@@ -292,7 +337,12 @@ std::string IrRemote::SendLightPower() {
 }
 
 std::string IrRemote::GetStatus() const {
-    return std::string("{\"fan_power\":") + (fan_power_.learned ? "true" : "false") +
+    return std::string("{\"ac_open\":") + (ac_open_.learned ? "true" : "false") +
+        ",\"ac_close\":" + (ac_close_.learned ? "true" : "false") +
+        ",\"tv_open\":" + (tv_open_.learned ? "true" : "false") +
+        ",\"tv_close\":" + (tv_close_.learned ? "true" : "false") +
+        ",\"fan_open\":" + (fan_open_.learned ? "true" : "false") +
+        ",\"fan_close\":" + (fan_close_.learned ? "true" : "false") +
         ",\"fan_speed\":" + (fan_speed_.learned ? "true" : "false") +
         ",\"fan_speed_down\":" + (fan_speed_down_.learned ? "true" : "false") +
         ",\"light_power\":" + (light_power_.learned ? "true" : "false") + "}";

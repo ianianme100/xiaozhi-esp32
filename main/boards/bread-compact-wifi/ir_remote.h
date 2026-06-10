@@ -13,12 +13,22 @@ public:
     IrRemote(gpio_num_t rx_gpio, gpio_num_t tx_gpio);
     ~IrRemote();
 
-    std::string LearnFanPower();
+    std::string LearnAcOpen();
+    std::string LearnAcClose();
+    std::string LearnTvOpen();
+    std::string LearnTvClose();
+    std::string LearnFanOpen();
+    std::string LearnFanClose();
     std::string LearnFanSpeed();
     std::string LearnFanSpeedDown();
     std::string LearnLightPower();
 
-    std::string SendFanPower();
+    std::string SendAcOpen();
+    std::string SendAcClose();
+    std::string SendTvOpen();
+    std::string SendTvClose();
+    std::string SendFanOpen();
+    std::string SendFanClose();
     std::string SendFanSpeed();
     std::string SendFanSpeedDown();
     std::string SendLightPower();
@@ -56,7 +66,12 @@ private:
 
     std::array<rmt_symbol_word_t, kMaxSymbols> capture_symbols_ {};
 
-    LearnedCode fan_power_;
+    LearnedCode ac_open_;
+    LearnedCode ac_close_;
+    LearnedCode tv_open_;
+    LearnedCode tv_close_;
+    LearnedCode fan_open_;
+    LearnedCode fan_close_;
     LearnedCode fan_speed_;
     LearnedCode fan_speed_down_;
     LearnedCode light_power_;
